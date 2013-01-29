@@ -7,8 +7,8 @@ import org.junit.Test;
 import java.util.concurrent.*;
 
 import static java.lang.Thread.sleep;
-import static java.util.concurrent.Executors.newFixedThreadPool;
-import static java.util.concurrent.TimeUnit.*;
+import static java.util.concurrent.Executors.newSingleThreadExecutor;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -16,17 +16,18 @@ import static org.hamcrest.MatcherAssert.assertThat;
 public class ReadLockTest {
 
     public static final int INITIAL_VALUE = 5;
-    public static final int NEW_VALUE = 10;
     public static final long TIMEOUT = 100L;
 
     private Integer resource;
 
     private ExecutorService executorService;
+    private ExecutorService concurrentExecutorService;
     private ReadLock readLock;
 
     @Before
     public void setUp() throws Exception {
-        executorService = newFixedThreadPool(2);
+        executorService = newSingleThreadExecutor();
+        concurrentExecutorService = newSingleThreadExecutor();
         readLock = new RWLockImpl();
     }
 

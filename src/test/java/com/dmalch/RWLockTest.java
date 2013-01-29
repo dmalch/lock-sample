@@ -7,7 +7,7 @@ import org.junit.Test;
 import java.util.concurrent.*;
 
 import static java.lang.Thread.sleep;
-import static java.util.concurrent.Executors.newFixedThreadPool;
+import static java.util.concurrent.Executors.newSingleThreadExecutor;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.not;
@@ -22,11 +22,13 @@ public class RWLockTest {
     private Integer resource;
 
     private ExecutorService executorService;
+    private ExecutorService concurrentExecutorService;
     private RWLock rwLock;
 
     @Before
     public void setUp() throws Exception {
-        executorService = newFixedThreadPool(2);
+        executorService = newSingleThreadExecutor();
+        concurrentExecutorService = newSingleThreadExecutor();
         rwLock = new RWLockImpl();
     }
 
@@ -121,7 +123,8 @@ public class RWLockTest {
     }
 
     private void writeLockedValue(final int newValue) throws InterruptedException, ExecutionException {
-        executorService.submit(writeValue(newValue));
+        concurrentExecutorService.submit(writeValue(newValue));
+        new Thread(writeValue(newValue)).start();
     }
 
     private Runnable writeValue(final int newValue) {
