@@ -3,20 +3,21 @@ package com.dmalch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import static java.lang.Thread.*;
 
 public class RWLockImpl implements RWLock {
 
     private static final transient Logger logger = LoggerFactory.getLogger(RWLockImpl.class);
 
-    private boolean lockedForWrite = false;
-    private boolean lockedForRead = false;
+    private AtomicBoolean lockedForWrite = new AtomicBoolean(false);
+    private AtomicBoolean lockedForRead = new AtomicBoolean(false);
     private Thread ownerThread;
 
     @Override
     public void acquireWrite() {
-        if (!lockedForWrite) {
-            lockForWrite();
+        if (lockForWrite()) {
         } else if (threadIsOwner()) {
             logger.info("in owner thread continue to work");
         } else {
@@ -26,7 +27,7 @@ public class RWLockImpl implements RWLock {
 
     private void waitForWriteLockToBeReleased() {
         logger.info("waiting for write lock to be released");
-        while (lockedForWrite) {
+        while (lockedForWrite.get()) {
             try {
                 sleep(100L);
             } catch (InterruptedException e) {
@@ -35,11 +36,13 @@ public class RWLockImpl implements RWLock {
         }
     }
 
-    private void lockForWrite() {
-        logger.info("locking for write");
-        lockedForWrite = true;
-
-        ownerThread = currentThread();
+    private boolean lockForWrite() {
+        if (lockedForWrite.compareAndSet(false, true)) {
+            logger.info("locking for write");
+            ownerThread = currentThread();
+            return true;
+        }
+        return false;
     }
 
     private boolean threadIsOwner() {
@@ -49,13 +52,12 @@ public class RWLockImpl implements RWLock {
     @Override
     public void releaseWrite() {
         logger.info("unlocking for write");
-        lockedForWrite = false;
+        lockedForWrite.set(false);
     }
 
     @Override
     public void acquireRead() {
-        if (!lockedForRead) {
-            lockForRead();
+        if (lockForRead()) {
         } else if (threadIsOwner()) {
             logger.info("in owner thread continue to work");
         } else {
@@ -65,7 +67,7 @@ public class RWLockImpl implements RWLock {
 
     private void waitForReadLockToBeReleased() {
         logger.info("waiting for read lock to be released");
-        while (lockedForRead) {
+        while (lockedForRead.get()) {
             try {
                 sleep(100L);
             } catch (InterruptedException e) {
@@ -74,16 +76,20 @@ public class RWLockImpl implements RWLock {
         }
     }
 
-    private void lockForRead() {
-        logger.info("locking for read");
-        lockedForRead = true;
+    private boolean lockForRead() {
+        if (lockedForRead.compareAndSet(false, true)) {
+            logger.info("locking for read");
+            lockedForRead.set(true);
 
-        ownerThread = currentThread();
+            ownerThread = currentThread();
+            return true;
+        }
+        return false;
     }
 
     @Override
     public void releaseRead() {
         logger.info("unlocking for read");
-        lockedForRead = false;
+        lockedForRead.set(false);
     }
 }
