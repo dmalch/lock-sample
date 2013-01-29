@@ -3,19 +3,16 @@ package com.dmalch;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.*;
 
 import static java.lang.Thread.sleep;
 import static java.util.concurrent.Executors.newSingleThreadExecutor;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 public class WriteNestedLockTest {
-
-    private static final transient Logger logger = LoggerFactory.getLogger(WriteNestedLockTest.class);
 
     public static final int INITIAL_VALUE = 5;
     public static final int NEW_VALUE = 10;
@@ -25,13 +22,13 @@ public class WriteNestedLockTest {
 
     private ExecutorService executorService;
     private ExecutorService concurrentExecutorService;
-    private WriteLock writeLock;
+    private RWLock rwLock;
 
     @Before
     public void setUp() throws Exception {
         executorService = newSingleThreadExecutor();
         concurrentExecutorService = newSingleThreadExecutor();
-        writeLock = new RWLockImpl();
+        rwLock = new RWLockImpl();
     }
 
     @After
@@ -44,6 +41,38 @@ public class WriteNestedLockTest {
         givenResource();
 
         thenWriteInNestedLocksIsPossible();
+    }
+
+    @Test
+    public void testReadWhenNestedLock() throws Exception {
+        givenResource();
+
+        thenReadInNestedLocksIsPossible();
+    }
+
+    private void thenReadInNestedLocksIsPossible() throws InterruptedException, ExecutionException, TimeoutException {
+        final Future<Integer> integerFuture = readLockedValue();
+
+        assertThat(integerFuture.get(TIMEOUT, MILLISECONDS), equalTo(INITIAL_VALUE));
+    }
+
+    private Future<Integer> readLockedValue() throws InterruptedException, ExecutionException {
+        return executorService.submit(readValue());
+    }
+
+    private Callable<Integer> readValue() {
+        return new Callable<Integer>() {
+            @Override
+            public Integer call() {
+                rwLock.acquireRead();
+                rwLock.acquireRead();
+                final Integer ret = resource;
+                rwLock.releaseRead();
+                rwLock.releaseRead();
+
+                return ret;
+            }
+        };
     }
 
     private void thenWriteInNestedLocksIsPossible() throws InterruptedException {
@@ -63,23 +92,13 @@ public class WriteNestedLockTest {
         return new Runnable() {
             @Override
             public void run() {
-                writeLock.acquireWrite();
-                writeLock.acquireWrite();
+                rwLock.acquireWrite();
+                rwLock.acquireWrite();
                 resource = newValue;
-                writeLock.releaseWrite();
-                writeLock.releaseWrite();
+                rwLock.releaseWrite();
+                rwLock.releaseWrite();
             }
         };
-    }
-
-    private void whenResourceLocked() throws InterruptedException {
-        lockResource();
-
-        sleep(TIMEOUT);
-    }
-
-    private void lockResource() {
-        executorService.submit(acquireLock());
     }
 
 
@@ -87,7 +106,7 @@ public class WriteNestedLockTest {
         return new Runnable() {
             @Override
             public void run() {
-                writeLock.acquireWrite();
+                rwLock.acquireWrite();
             }
         };
     }

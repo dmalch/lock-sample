@@ -23,7 +23,7 @@ public class RWLockImpl implements RWLock {
         } else if (threadIsOwner()) {
             logger.info("in owner thread continue to work");
         } else {
-            logger.info("waiting for lock to be released");
+            logger.info("waiting for write lock to be released");
             while (lockedForWrite) {
                 try {
                     sleep(100L);
@@ -49,7 +49,12 @@ public class RWLockImpl implements RWLock {
         if (!lockedForRead) {
             logger.info("locking for read");
             lockedForRead = true;
+
+            ownerThread = currentThread();
+        } else if (threadIsOwner()) {
+            logger.info("in owner thread continue to work");
         } else {
+            logger.info("waiting for read lock to be released");
             while (lockedForRead) {
                 try {
                     sleep(100L);

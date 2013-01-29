@@ -98,7 +98,7 @@ public class ReadLockTest {
     }
 
     private Future<Integer> readLockedValue() throws InterruptedException, ExecutionException {
-        return executorService.submit(readValue());
+        return concurrentExecutorService.submit(readValue());
     }
 
     private Callable<Integer> readValue() {
