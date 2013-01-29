@@ -16,22 +16,30 @@ public class RWLockImpl implements RWLock {
     @Override
     public void acquireWrite() {
         if (!lockedForWrite) {
-            logger.info("locking for write");
-            lockedForWrite = true;
-
-            ownerThread = currentThread();
+            lockForWrite();
         } else if (threadIsOwner()) {
             logger.info("in owner thread continue to work");
         } else {
-            logger.info("waiting for write lock to be released");
-            while (lockedForWrite) {
-                try {
-                    sleep(100L);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
+            waitForWriteLockToBeReleased();
+        }
+    }
+
+    private void waitForWriteLockToBeReleased() {
+        logger.info("waiting for write lock to be released");
+        while (lockedForWrite) {
+            try {
+                sleep(100L);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
             }
         }
+    }
+
+    private void lockForWrite() {
+        logger.info("locking for write");
+        lockedForWrite = true;
+
+        ownerThread = currentThread();
     }
 
     private boolean threadIsOwner() {
@@ -47,22 +55,30 @@ public class RWLockImpl implements RWLock {
     @Override
     public void acquireRead() {
         if (!lockedForRead) {
-            logger.info("locking for read");
-            lockedForRead = true;
-
-            ownerThread = currentThread();
+            lockForRead();
         } else if (threadIsOwner()) {
             logger.info("in owner thread continue to work");
         } else {
-            logger.info("waiting for read lock to be released");
-            while (lockedForRead) {
-                try {
-                    sleep(100L);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
+            waitForReadLockToBeReleased();
+        }
+    }
+
+    private void waitForReadLockToBeReleased() {
+        logger.info("waiting for read lock to be released");
+        while (lockedForRead) {
+            try {
+                sleep(100L);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
             }
         }
+    }
+
+    private void lockForRead() {
+        logger.info("locking for read");
+        lockedForRead = true;
+
+        ownerThread = currentThread();
     }
 
     @Override
